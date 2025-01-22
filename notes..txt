@@ -1,0 +1,47 @@
+
+# Initiate UV Project
+- uv init
+
+# Initiate Alembic for sql migrations
+- uv run alembic init -t async ./src/migrations 
+
+
+# Install dependencies using UV
+- uv add <module_name>
+
+# Run Server
+- uv run fastapi dev src/main.py
+
+
+# make migrations using alembic
+- uv run alembic revision --autogenerate -m "migration decscription"
+
+# migration using alembic
+- uv run alembic upgrade head
+
+
+NOTE
+When there is an error in migrations, remove the migrations file and fix the issue
+
+
+# added in installed libraries
+- aiohttp
+- requests
+
+
+# Initiate Cash Out function
+- JWT Required 
+- Get user details
+
+headers = {
+    "apikey": config('tw_apikey),
+    "secretkey": config("tw_secretkey)
+}
+
+    transfer_payload = {
+        "from_user": user_data['user_topwallet_id'],
+        "to_user": current_app.config['TW_MOTHERWALLET'],
+        "amount": float(data['amount']) + float(15),  # Include fee
+        "coin": "peso"
+    }
+

@@ -1,0 +1,103 @@
+* Add UNILEVEL Feature to Database
+    - Add referred_by to users table, its purpose is to identify who referred the user. ( DONE CREATING REFERAL )
+* Redevelop Mobile API
+    - Use the old source code as reference of the logic and use FastAPI with the provided project structure.
+    - Develop based on the chronological order;
+        -> Initiate Login # DONE I think hehe
+        -> Process Login # this too DONE, but i think i did it in a wrong way
+        -> Validate MPIN # DONE
+        -> Set MPIN # DONE
+        -> Reset MPIN # DONE
+
+        -> Initiate Cash-OUT = Ask James after reveloping the MPIN Feature for TopWallet Staging Access
+        -> Process Cash-OUT = Ask James after reveloping the MPIN Feature for TopWallet Staging Access
+        -> Initiate PayQR = This will be discussed after developing the Process Cash-OUT
+        -> Process PayQR = This will be discussed after developing the Process Cash-OUT
+
+
+
+
+
+# INITIATE LOGIN
+- get mobile_number
+- user = UserRepo.get_user().filter(mobile_number)
+- if not user.mpin:
+    otpRepo.create_otp() -> user
+    otpRepo.send_otp() -> user.mobile_number
+    otpRepo.validate_otp() -> created otp (same, datetime)
+    
+
+
+# create otp record
+- once the opt expired or used get the otp record and delete it 
+
+# 
+
+# TODO
+
+- Validate MPIN wala yung data ng users na tulad ng nasa Flask  ( DONE )
+
+- Process Login wala yung jwt sa response, eto yung gagamitin ng frontend to authenticate. Done
+
+- Protect MPIN Endpoint with JWT Auth.  DONE
+
+- Merchant and User, sa Membership API lang ito
+
+- yung otp gamitin mo yung itexmo api para sa pagsend ng otp
+
+para may overview ka ng responses ng Mobile API
+
+1. Register to GoSEND
+2. Get Postman Collection from kuya @Nelson Biasura
+3. Explore yung Postman Collection
+
+- lalagay mo sya dun sa create_otp service para mareceive
+
+
+bali ang goal for Cash Out is:
+
+√ P2P Transfer to Netsui Wallet
+
+√ Initiate Self Withdraw from Netsui Wallet to User (Top Wallet)
+
+√ Create transactions table record with pending status
+
+    √ Create Withdraw reference record to user who initiated cash out
+    √ Create Withdraw record to user who initiated cash out
+
+    √ Create Commission record to 1st Level Referal (Who Referred the user initiated cash out)
+    √ Create Commission record to 2nd Level Referal (Who Referred the 1st Level)
+    √ Create Commission record to 3rd Level Referal (Who Referred the 2nd Level)
+
+    √ Make sure that all records are pending. No need to send OTP, topwallet will handle the OTP.
+
+√ Process Self Withdraw from Netsui Wallet to User
+√ Perform the commission sending of points
+    √ Update users, 1st, 2nd and 3rd level referral's wallet balance based on the commission set on the transactions table.
+
+
+Make sure to copy yung format ng endpoint and json body
+
+Ayan yung tinatawag na Unilevel yung Referral Commissions
+
+Code read mo yung initiate_cash_out at process_cash_out sa Flask andun na lahat ng logic
+
+
+User1 nirefer ni User2 = User2 is first level
+User2 is nirefer ni User3 = User3 is second level
+User3 is nirefer ni User4 = User4 is third level
+
+
+
+Account creation > unilevel default = 0
+
+If user(1) refer another user(2): user1 unilevel = 1 40pesos
+
+if user(2) refer another user(3): user2 unilevel = 2 10pesos
+
+if user(3) refer another user(4): user3 unilevel = 3 5pesos
+
+if user(4) refer another user(5): user4 unilevel will be level 3 since its the max level
+
+and so on, level 3 is max which is 5 pesos per refer
+

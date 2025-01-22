@@ -1,0 +1,1185 @@
+{
+	"info": {
+		"_postman_id": "f8f6d75f-b305-4a5a-82a6-42e6d3b85236",
+		"name": "GoSEND",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "22814412",
+		"_collection_link": "https://dark-rocket-805288.postman.co/workspace/My-Workspace~d66c8059-2ecf-4b58-8428-eefa866bf18b/collection/22814412-f8f6d75f-b305-4a5a-82a6-42e6d3b85236?action=share&source=collection_link&creator=22814412"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Initiate Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"mobile_number\": \"09273978472\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/login",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Process Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"mobile_number\": \"09273978472\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/login/317269",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"login",
+								"317269"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "MPIN",
+			"item": [
+				{
+					"name": "Validate MPIN",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"imei\": \"\", //not yet used\n    \"mpin\": \"1234\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/mpin/validate",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"mpin",
+								"validate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Initiate Reset MPIN",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/mpin/reset",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"mpin",
+								"reset"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Process Reset MPIN",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"otp_code\": \"152591\",\n    \"mpin\": \"4321\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/mpin/reset",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"mpin",
+								"reset"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Set MPIN",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"imei\": \"\", //not yet used\n    \"mpin\": \"1234\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/mpin/set",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"mpin",
+								"set"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Conversion",
+			"item": [
+				{
+					"name": "Get Conversion Rate",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_currency\": 1,\n    \"to_currency\": 2,\n    \"amount\": 1090.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/conversion-rate",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"conversion-rate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Initiate Conversion",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_currency\": 1,\n    \"to_currency\": 2,\n    \"amount\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/conversion",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"conversion"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Process Conversion",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"transaction_id\": \"REF2ef772bb092e4a239685a6be2b4fad13\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/conversion/813660",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"conversion",
+								"813660"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Transaction",
+			"item": [
+				{
+					"name": "Get Bank List",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/bank-list",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"bank-list"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction History",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/transaction",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"transaction"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cash In",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/cash-in",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"cash-in"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Initate Cash Out",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"full_name\": \"James Roi Dela Cruz\",\n    \"account_number\": \"09273978472\",\n    \"bank_code\": \"GHPESGSGXXX\",\n    \"channel\": \"INSTAPAY\",\n    \"amount\": 400.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/cash-out",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"cash-out"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Process Cash Out",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"transaction_id\": \"TRX35569d742acf4b52b58e17ef7f80f6a5\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/cash-out/185377",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"cash-out",
+								"185377"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Initiate P2P Transfer",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"to_user\": \"09273978472\",\n    \"amount\": 10.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/p2p/transfer/initiate",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"p2p",
+								"transfer",
+								"initiate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Process P2P Transfer",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"transaction_id\": \"REF6add25f9072c439299f2d6328faf2d4c\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/p2p/transfer/process/666963",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"p2p",
+								"transfer",
+								"process",
+								"666963"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "KYC",
+			"item": [
+				{
+					"name": "Get KYC URL",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/kyc/topwallet",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"kyc",
+								"topwallet"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Account",
+			"item": [
+				{
+					"name": "User Balance",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/balance",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"balance"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Initiate Activate Account",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/activate-account",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"activate-account"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Process Activate Account",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"transaction_id\": \"TRX990b8809b3204f80a9009bd9ee8ba7a8\",\n    \"otp_code\": \"250627\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/activate-account",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"activate-account"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Referral",
+			"item": [
+				{
+					"name": "Get Referral Member List",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/referral/members",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"referral",
+								"members"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Referral Details",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/referral",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"referral"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Activation Rewards History",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/referral/activation-rewards",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"referral",
+								"activation-rewards"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "PayQR",
+			"item": [
+				{
+					"name": "Get PayQR URL",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"merchant_id\": \"11277097027\",\n    \"amount\": 100.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/payqr",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"payqr"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "QRCode",
+			"item": [
+				{
+					"name": "Scan QR Code",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n   \"string\":\"11277097027\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/qrcode",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"qrcode"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "QRPh",
+			"item": [
+				{
+					"name": "Initiate QRPh Transaction",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n   \"disburse_id\": \"XXXX\",\n   \"merchant_name\": \"XXXX\",\n   \"amount\": 0.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/qrph/transfer/initiate",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"qrph",
+								"transfer",
+								"initiate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Process QRPh Transaction",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n   \"disburse_id\": \"XXX\",\n   \"transaction_id\": \"XXX\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/qrph/transfer/initiate/123456",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"qrph",
+								"transfer",
+								"initiate",
+								"123456"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Merchant",
+			"item": [
+				{
+					"name": "Get Merchant List",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"radius\": 10,\n  \"name\": \"isla\",\n  \"user_lat\": null,\n  \"user_lon\": null\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/merchant",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"merchant"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Merchant Details",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{mobile_api_auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/merchant/11277097027",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"merchant",
+								"11277097027"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Extra",
+			"item": [
+				{
+					"name": "Get Masked Name",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"recipient_mobile_number\": \"09273978472\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{mobile_api_url}}/v1/extra/get-mask-name",
+							"host": [
+								"{{mobile_api_url}}"
+							],
+							"path": [
+								"v1",
+								"extra",
+								"get-mask-name"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
