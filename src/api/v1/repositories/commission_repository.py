@@ -8,6 +8,7 @@ from uuid import uuid4
 
 
 
+
 class CommissionRepository:
     @staticmethod
     async def create_commmission(db: AsyncSession, commission_data: CommissionCreate):

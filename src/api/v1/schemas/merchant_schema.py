@@ -111,3 +111,6 @@ class MerchantUpdate(BaseModel):
 
 
 
+
+class PurchaseData(BaseModel):
+    amount: float

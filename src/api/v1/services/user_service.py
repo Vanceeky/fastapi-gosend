@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from utils.responses import json_response
 from api.v1.repositories.user_repository import UserRepository
 from models.user_model import UserDetail, UserWallet, UserWalletExtension
-from api.v1.schemas.user_schema import UserCreate, UserUpdate, UserResponse, UserAddressCreate, UserDetailCreate, ProcessAccountInput
+from api.v1.schemas.user_schema import UserCreate, UserUpdate, UserResponse, UserAddressCreate, UserDetailCreate, ProcessAccountInput, ProcessMemberActivation, InitiateMemberActivation
 from uuid import uuid4
 from core.security import hash_password
 from decouple import config
@@ -25,6 +25,9 @@ from api.v1.services.commission_service import CommissionService
 from api.v1.schemas.transaction_schema import TransactionDetails
 from api.v1.services.referral_service import ReferralService
 from api.v1.repositories.referral_repository import ReferralRepository
+from models.activation_history_model import ActivationHistory
+
+from api.v1.repositories.account_activation_repository import ActivationHistoryRepository
 
 
 
@@ -464,7 +467,7 @@ class UserService:
                     },
                     json={
                         "Transaction_id": transaction.transaction_reference,
-                        "otp": process_account_data.otp_code
+                       # "otp": process_account_data.otp_code
                     }
                 )
 
@@ -540,7 +543,209 @@ class UserService:
 
 
 
+    @staticmethod
+    async def get_user_upline_service(db: AsyncSession, user_id: str):
+        return await UserRepository.get_upline(db, user_id)
+    
+    @staticmethod
+    async def get_user_upline_service(db: AsyncSession, user_id: str):
+        upline_data = await UserRepository.get_upline(db, user_id)
+
+        if not upline_data:
+            return json_response(
+                status_code=404,
+                data=None,  # Returning `None` instead of `[]` for consistency
+                message="No user or upline found"
+            )
+
+        return json_response(
+            status_code=200,
+            data={
+                "user": upline_data.user.model_dump(),  # ✅ Include user details
+                "uplines": [user.model_dump() for user in upline_data.uplines]  # ✅ Include downlines
+            },
+            message="Downlines fetched successfully"
+        )
+    
+    @staticmethod
+    async def get_user_downline_service(db: AsyncSession, user_id: str):
+        downline_data = await UserRepository.get_downline(db, user_id)
+
+        if not downline_data:
+            return json_response(
+                status_code=404,
+                data=None,  # Returning `None` instead of `[]` for consistency
+                message="No user or downlines found"
+            )
+
+        return json_response(
+            status_code=200,
+            data={
+                "user": downline_data.user.model_dump(),  # ✅ Include user details
+                "downlines": [user.model_dump() for user in downline_data.downlines]  # ✅ Include downlines
+            },
+            message="Downlines fetched successfully"
+        )
 
 
 
 
+    # main -> authenticated user downlines
+    @staticmethod
+    async def get_user_downline_members(db: AsyncSession, user_id: str):
+        downlines = await UserRepository.get_user_downline(db, user_id)
+
+        if not downlines:
+            return json_response(
+                status_code=404,
+                data=[],
+                message="No downlines found"
+            )
+        
+        return json_response(
+            status_code=200,
+            data=[user.model_dump() for user in downlines],  # Ensure it's JSON-serializable
+            message="Downlines fetched successfully"
+        )
+
+
+    @staticmethod
+    async def initiate_member_activation(db: AsyncSession, account_data: InitiateMemberActivation, activated_by: str):
+        try:
+
+            user = await KYCRepository.get_user(db, activated_by)
+            external_id = user.external_id
+
+            user_data = await TransactionRepository.get_user_details(db, account_data.user_id)
+
+            if not user:
+                return json_response(
+                    message="Account data not found. Please contact customer service for assistance.",
+                    data={"user_id": account_data.user_id},
+                    status_code = 404
+                )
+            
+
+            async with httpx.AsyncClient() as client:
+                transfer_payload = {
+                    "from_user": external_id,
+                    "to_user": config("TW_MOTHERWALLET"),
+                    "amount": float(175),
+                    "coin": "peso"
+                }
+                response = await client.post(
+                    url = f"{config('TW_API_URL')}/b2bapi/initiate_p2ptransfer",
+                    headers = {
+                        "apikey": config('TW_API_KEY'),
+                        "secretkey": config("TW_SECRET_KEY"),
+                    },
+                    json = transfer_payload
+                )
+
+                if response.status_code != 200:
+                    try:
+                        error_data = response.json()
+                    except Exception:
+                        error_data = {"message": response.text.strip()}
+
+                    return json_response(
+                        message = response.text,
+                        data = error_data,
+                        status_code=response.status_code
+                    )
+                
+                else:
+                    try:
+                        activation_history = ActivationHistory(
+                            transaction_id=f"TRX{uuid4().hex[:17]}",  # Ensures length is exactly 20
+
+                            user_id = account_data.user_id,
+                            receiver_id = config("ADMIN_STAGING"), # CHANGED IT INTO TW_MOTHERWALLET
+                            activated_by = activated_by,
+                            amount=float(175),
+                           # currency = "peso",
+                           # transaction_type = "debit",
+                            title = "Account Activation",
+                            description = f"You have paid {float(175)} pesos for member account activation",
+                            activated_in = "web",
+                            sender_name = str(mask_name(user_data.first_name + ' ' + user_data.last_name + ".")),
+                            receiver_name = "ADMIN MOTHERWALLET",
+                            reference_id=response.json()['Transaction_id'],
+                        )
+
+                        db.add(activation_history)
+                        await db.commit()
+                        await db.refresh(activation_history)
+
+                        return json_response(
+                            message = "Account activation initiated successfully",
+                            data = response.json(), # transaction reference
+                            #data = transaction.transaction_id,
+                            status_code = 200
+                        )   
+
+
+                    except Exception as e:
+                        await db.rollback()
+                        return json_response(
+                            message = "Error creating transaction",
+                            data = str(e),
+                            status_code = 500
+                        )
+
+
+        except Exception as e:
+            return json_response(
+                message=f"Error fetching user topwallet id: {str(e)}",
+                data={"user_id":account_data.user_id},
+                status_code = 404
+            )
+        
+
+
+    @staticmethod
+    async def process_member_activation(db: AsyncSession, process_account_data: ProcessMemberActivation, user_id: str):
+        try:
+
+            activation_history = await ActivationHistoryRepository.get_activation_history(db, process_account_data.reference_id)
+
+            if not activation_history:
+                return json_response(
+                    message="Activation history not found. Please contact customer service for assistance.",
+                    status_code = 404
+                )
+            
+            
+            user = await UserRepository.get_user(db, activation_history.user_id)
+
+            if not user:
+                return json_response(
+                    message="User not found. Please contact customer service for assistance.",
+                    status_code = 404
+                )
+            
+
+            user.status = True
+            user.is_activated = True
+
+            db.add(user)
+
+            
+            activation_history.status = "Completed"
+            db.add(activation_history)
+            await db.commit()
+            await db.refresh(activation_history)
+
+            return json_response(
+                message="Account activation processed successfully",
+                status_code = 200
+            )
+            
+
+        except Exception as e:
+            return json_response(
+                message=f"Error fetching user topwallet id: {str(e)}",
+                
+                status_code = 404
+            )
+        

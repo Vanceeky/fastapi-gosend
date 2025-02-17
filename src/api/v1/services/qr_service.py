@@ -26,7 +26,7 @@ class QRService:
             # Construct URL
             target_url = (
                 f"https://gosendit.net/paynow.php?"
-                f"user_id={merchant.user_id}&"
+                f"user_id={user_id}&"
                 f"merchant_id={merchant.merchant_id}&"
                 f"amount={pay_qr_data.amount}"
             )

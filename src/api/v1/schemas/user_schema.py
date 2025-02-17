@@ -216,4 +216,49 @@ class UserResponse(BaseModel):
 
 class ProcessAccountInput(BaseModel):
     transaction_reference: str
+   # otp_code: str
+
+
+
+
+class User(BaseModel):
+    user_id: str
+    mobile_number: str
+    account_type: str
+
+class UplineResponse(BaseModel):
+    user: User
+    uplines: List[User]
+
+class DownlineResponse(BaseModel):
+    user: User
+    downlines: List[User]
+
+
+class UserSchema(BaseModel):
+    user_id: str
+    mobile_number: str
+    account_type: str
+    first_name: Optional[str]
+    middle_name: Optional[str]
+    last_name: Optional[str]
+    suffix: Optional[str]
+    status: str  # "activated" or "not activated"
+
+
+class ReferralDownlineSchema(BaseModel):
+    user: UserSchema
+    downlines: List[UserSchema]
+
+class ReferralUplineSchema(BaseModel):
+    user: UserSchema
+    uplines: List[UserSchema]
+
+
+class InitiateMemberActivation(BaseModel):
+    user_id: str
+   # otp_code: str
+
+class ProcessMemberActivation(BaseModel):
+    reference_id: str
     otp_code: str

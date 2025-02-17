@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, ForeignKey, TIMESTAMP, Enum, Boolean, Float
+from sqlalchemy import Column, String, ForeignKey, TIMESTAMP, Enum, Boolean, Float, DECIMAL
 from sqlalchemy.orm import relationship
 from core.database import Base
 
@@ -12,7 +12,7 @@ class Merchant(Base):
     merchant_id = Column(String(36), primary_key=True, default= lambda: str(uuid4()), index=True)
 
     mobile_number = Column(String(36), ForeignKey('users.mobile_number', ondelete="cascade", onupdate="cascade"), unique=True, nullable=False)
-
+    merchant_wallet = Column(DECIMAL(10, 2), nullable=False, server_default="0.00", default=0.00)
     qr_code_url = Column(String(3000), nullable=True)  # Nullable to handle merchants without a QR code
 
     business_name = Column(String(255), nullable=False)
@@ -29,6 +29,10 @@ class Merchant(Base):
 
     merchant_details = relationship("MerchantDetails", back_populates="merchant")
     merchant_referrals = relationship("MerchantReferral", foreign_keys="[MerchantReferral.referred_to]", back_populates="referred_to_merchant")
+
+    # Relationship to purchases
+    purchases = relationship("MerchantPurchase", back_populates="merchant")
+
 
 class MerchantDetails(Base):
     __tablename__ = 'merchant_details'

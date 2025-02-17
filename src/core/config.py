@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     tw_api_key: str
     tw_secret_key: str
     tw_motherwallet: str
+
+    admin_staging: str
     
     """
     The database connection URL. This is the connection string for connecting to the database,

@@ -12,8 +12,11 @@ class Transaction(Base):
     sender_id = Column(String(36), nullable=False, index=True)
     receiver_id = Column(String(36), nullable=False, index=True)
     amount = Column(DECIMAL(10, 2), nullable=False)
+
     currency = Column(String(50), nullable=False)
+
     transaction_type = Column(String(50), nullable=False)
+
     title = Column(String(255), nullable=False)
     description = Column(String(255), nullable=True)
 
@@ -21,13 +24,16 @@ class Transaction(Base):
     receiver_name = Column(String(255), nullable=False)
 
     status = Column(Enum('pending', 'completed', 'failed', 'refunded'), nullable=False, server_default='pending', default='pending')
-    transaction_reference = Column(String(255), nullable=True)
+
+    transaction_reference = Column(String(36), nullable=True)
     extra_metadata = Column(String(255), nullable=True)
 
     updated_at = Column(TIMESTAMP, nullable=False, server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), default=func.now(), onupdate=func.now())
     created_at = Column(TIMESTAMP, nullable=False, server_default=text('CURRENT_TIMESTAMP'), default=func.now())
 
-    distribution = relationship("Distribution", foreign_keys="[Distribution.transaction_id]", back_populates="transaction")
+    # Relationship with RewardHistory
+    #reward = relationship("RewardHistory", back_populates="transaction", uselist=False)
+
 
 class Distribution(Base):
     __tablename__ = "distribution_history"
@@ -43,7 +49,3 @@ class Distribution(Base):
     updated_at = Column(TIMESTAMP, nullable=False, server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), default=func.now(), onupdate=func.now())
     created_at = Column(TIMESTAMP, nullable=False, server_default=text('CURRENT_TIMESTAMP'), default=func.now())
 
-    transaction = relationship(
-        "Transaction", 
-        back_populates="distribution"
-    )

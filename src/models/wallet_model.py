@@ -18,6 +18,7 @@ class Wallet(Base):
     wallet_id = Column(String(36), primary_key=True, index=True)
     public_address = Column(TEXT, nullable=False, index=True)
     balance = Column(DECIMAL(10, 2), nullable=False, server_default="0.00", default=0.00)
+    reward_points = Column(DECIMAL(10, 2), nullable=False, server_default="0.00", default=0.00)
     updated_at = Column(TIMESTAMP, nullable=False, server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'), default=func.now(), onupdate=func.now())
     
     user_wallets = relationship("UserWallet", back_populates="wallets") 

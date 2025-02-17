@@ -1,0 +1,254 @@
+Gosend DB schema
+
+
+Table user {
+  user_id uuid [primary key]
+  mobile_number unique
+  mpin int
+  is_activated bool
+  email_address unique
+  password str
+
+  referral_code int
+
+  community str
+
+  updated_at timestamp
+  created_at timestamp
+}
+
+Table user_details {
+  user_id uuid [primary key]
+  first_name str
+  last_name str
+  middle_name str
+  suffix_name str
+
+  is_politician bool
+  is_veteran bool
+  is_family_politician bool
+}
+
+Table user_address {
+  user_id uuid [primary key]
+  region str
+  province str
+  municipality_city str
+  house_number str
+  street_name str
+  barangay str
+}
+
+Table user_wallet {
+  user_id uuid
+  wallet_id uuid
+  is_primary bool
+}
+
+Table wallet {
+  wallet_id uuid [primary key]
+  user_id uuid
+  balance float
+  reward_points float
+
+  updated_at timestamp
+  created_at timestamp
+}
+
+Table wallet_extension {
+  wallet_extension_id str [primary key]
+  extension_name str
+  extension_type enum
+
+  updated_at timestamp
+  created_at timestamp
+}
+
+Table user_wallet_extension {
+  user_wallet_extension_id uuid
+  extension_id uuid (fk)
+  wallet_id uuid (fk)
+
+  external_id str unique
+
+}
+
+
+Table transaction {
+  transaction_id str unique
+  sender_id str (fk)
+  receiver_id str (fk)
+  amount float
+  current str
+  transaction_type str
+  title str
+  reference_id str
+  status enum
+
+  extra_metadata str
+
+  updated_at timestamp
+  created_at timestamp
+}
+
+Table reward_history {
+  transaction_id str (fk)
+  reward_from uuid (fk)
+  receiver uuid (fk)
+  reward_point float
+  type str
+
+  updated_at timestamp
+  created_at timestamp
+
+}
+
+Table referral {
+  referral_id uuid
+  referred_by uuid (fk)
+  referred_to uuid (fk)
+
+  updated_at timestamp
+  created_at timestamp
+}
+
+Table merchant {
+  merchant_id uuid [primary key]
+  user_mobile_number int (fk)
+  business_name str
+  business_type str
+  discount float
+
+  status bool
+
+  updated_at timestamp
+  created_at timestamp
+}
+
+
+Table merchant_details {
+  merchant_id uuid (fk)
+
+  longitude str
+  latitude str
+
+  contact_number str
+  business_email str
+
+  region str
+  province str
+  municipality_city str
+  barangay str
+  street_name str
+
+  updated_at timestamp
+  created_at timestamp
+}
+
+Table merchant_referral {
+  merchant_referral_id uuid
+
+  referrral_code str
+
+  referred_by uuid (fk)
+  referred_to uuid (fk)
+
+  updated_at timestamp
+  created_at timestamp
+}
+
+
+Table Community {
+  id str [primary key]
+  leader fk 
+  name str
+  description text
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table Investor {
+  id str [primary key]
+  user fk 
+  name str
+  description text
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table Hub {
+  id str [primary key]
+  user fk 
+  name str
+  description text
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table Reward_Conversion_History {
+  id str [primary key]
+  user_id fk
+
+  reward_points float
+
+  reference_id fk
+
+  status enum
+
+  description text
+
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table User_Activation_History {
+  id str [primary key]
+
+  user_id fk
+
+  receiver_id fk
+
+  reference_id str
+
+  amount float
+
+  activated_in enum
+
+  status enum
+
+  created_at timestamp
+  updated_at timestamp
+
+}
+
+
+Ref: user.user_id - user_details.user_id
+Ref: user.user_id - user_address.user_id
+Ref: user.user_id < user_wallet.user_id
+Ref: user_wallet.wallet_id - wallet.wallet_id
+Ref: user.user_id - wallet.user_id
+Ref: user_wallet_extension.extension_id - wallet_extension.wallet_extension_id
+Ref: wallet.wallet_id - user_wallet_extension.wallet_id
+Ref: transaction.sender_id - user.user_id
+Ref: transaction.receiver_id - user.user_id
+Ref: transaction.reference_id - reward_history.transaction_id
+Ref: transaction.sender_id - reward_history.reward_from
+Ref: user.user_id - reward_history.receiver
+Ref: transaction.amount - wallet.balance
+Ref: user.user_id < referral.referred_by
+Ref: user.user_id - referral.referred_to
+Ref: user.mobile_number - merchant.user_mobile_number
+Ref: merchant.merchant_id - merchant_details.merchant_id
+Ref: merchant_referral.referred_by - user.user_id
+Ref: merchant_referral.referred_to - merchant.merchant_id
+Ref: merchant_referral.referrral_code > user.referral_code
+Ref: Community.leader - user.user_id
+Ref: Investor.user - user.user_id
+Ref: Hub.user - user.user_id
+Ref: Reward_Conversion_History.user_id > user.user_id
+Ref: User_Activation_History.user_id - user.user_id
+ 

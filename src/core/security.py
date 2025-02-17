@@ -15,39 +15,20 @@ JWT_ALGORITHM = config("algorithm")
 
 
 def hash_password(password: str) -> str:
-    """
-    Hashes a plain password using bcrypt.
-
-    Args:
-        password (str): The plain text password to be hashed.
-
-    Returns:
-        str: The hashed password.
-    """
     return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """
-    Verifies if the plain password matches the hashed password.
-
-    Args:
-        plain_password (str): The plain text password to verify.
-        hashed_password (str): The hashed password to check against.
-
-    Returns:
-        bool: True if the plain password matches the hashed password, False otherwise.
-    """
     return pwd_context.verify(plain_password, hashed_password)
 
 
 
 def token_response(token: str):
     return {
-        "access_token": token
+        "access_token": token,
     }
 
 
-def sign_jwt(user_id: str) -> Dict[str, str]:
+def sign_jwt_main(user_id: str) -> Dict[str, str]:
     payload = {
         "user_id": user_id,
         "expires": time.time() + 6000
@@ -55,6 +36,15 @@ def sign_jwt(user_id: str) -> Dict[str, str]:
     token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
     return token_response(token)
 
+def sign_jwt(user_id: str, account_type: str = None) -> dict:
+    # Create the payload with the account type included
+    payload = {
+        "user_id": user_id,
+        "account_type": account_type,  # Add account_type to
+        "expires": time.time() + 6000
+    }
+    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return token_response(token)
 
 def decode_jwt(token: str) -> dict:
     try:

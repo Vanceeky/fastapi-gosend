@@ -11,10 +11,9 @@ from api.v1.repositories.kyc_repository import KYCRepository
 import httpx
 from decouple import config
 
+from core.security import hash_password
+
 class MPINService:
-
-
-
 
     @staticmethod
     async def validate_mpin(db: AsyncSession, validateMPIN: MPINRequest, user_id: str):
@@ -89,17 +88,19 @@ class MPINService:
     @staticmethod
     async def set_mpin(db: AsyncSession, mpin_data: MPINRequest, user_id: str):
         try:
-            user = await UserRepository.get_user(db, user_id)
 
+            user = await UserRepository.get_user(db, user_id)
+            hashed_mpin = hash_password(mpin_data.mpin)
+            
             if not user.mpin:
-                user.mpin = mpin_data.mpin
+            # Set the hashed MPIN
+                user.mpin = hashed_mpin
                 db.add(user)
                 await db.commit()
                 return json_response(
                     message="MPIN set successfully",
                     data = {
                         "phone_number": user.mobile_number,
-                        "mpin": mpin_data.mpin,
                     },
                     status_code=200
                 )

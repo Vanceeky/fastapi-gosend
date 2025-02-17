@@ -1,11 +1,19 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
-from models.user_model import User, UserAddress, UserDetail, UserWallet
+from sqlalchemy.orm import selectinload, joinedload
+from models.user_model import User, UserAddress, UserDetail, UserWallet, UserWalletExtension
 from models.wallet_model import Wallet
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from sqlalchemy.exc import IntegrityError
 from utils.responses import json_response
+from fastapi import HTTPException
+from models.referral_model import Referral
+from typing import Optional, List
+from api.v1.schemas.user_schema import UserSchema, ReferralDownlineSchema, ReferralUplineSchema
+
+from sqlalchemy.sql import union_all
+
+
 
 class UserRepository:
 
@@ -244,3 +252,346 @@ class UserRepository:
 
         except Exception as e:
             raise e
+        
+
+    @staticmethod
+    async def get_user_communty(db: AsyncSession, user_id: str):
+        try:
+            result = await db.execute(
+                select(User).where(User.user_id == user_id)
+            )
+
+            return result.scalars().first()
+        
+        except Exception as e:
+            raise e
+
+    @staticmethod
+    async def get_user_wallet_balance(db: AsyncSession, user_id: str):
+        try:
+            result = await db.execute(
+                select(Wallet.balance, Wallet.reward_points).join(
+                    UserWallet, UserWallet.wallet_id == Wallet.wallet_id
+                ).where(UserWallet.user_id == user_id)
+            )
+
+            wallet_data = result.first() 
+
+            if wallet_data:
+                balance, reward_points = wallet_data 
+                return {"balance": balance, "reward_points": reward_points}
+
+            return {"balance": 0.00, "reward_points": 0.00} 
+
+        except Exception as e:
+            raise e
+
+
+    @staticmethod
+    async def get_user_reward_points(db: AsyncSession, user_id: str):
+        try:
+            # Query to retrieve the reward points of the user from the Wallet table
+            result = await db.execute(
+                select(
+                    Wallet.reward_points  # Select reward_points from Wallet
+                )
+                .join(UserWallet, UserWallet.wallet_id == Wallet.wallet_id)  # Join UserWallet to Wallet
+                .join(User, User.user_id == UserWallet.user_id)  # Join User to UserWallet to get user details
+                .where(User.user_id == user_id)
+            )
+
+            # Retrieve the reward points of the user
+            reward_points = result.scalar_one_or_none()
+
+            return reward_points if reward_points is not None else 0  # Return 0 if no reward points are found
+
+        except Exception as e:
+            raise e
+
+    @staticmethod
+    async def update_user_reward_points(db: AsyncSession, user_id: str, new_reward_points: float):
+        try:
+            
+            # Fetch wallet ID for user
+            result = await db.execute(
+                select(UserWallet.wallet_id)
+                .where(UserWallet.user_id == user_id)
+            )
+
+            print("User ID Wallet why hub againnn:", user_id)
+
+            wallet_id = result.scalar_one_or_none()
+
+            print("Get User wallet ID in updating reward points:", wallet_id)
+            
+            if not wallet_id:
+                raise HTTPException(status_code=404, detail="Wallet not found for the user")
+
+
+            result = await db.execute(
+                select(Wallet.reward_points)
+                .where(Wallet.wallet_id == wallet_id)
+            )
+            current_reward_points = result.scalar_one_or_none() or 0  # Default to 0 if None
+
+            # **Fix: Add instead of overwrite**
+            stmt = (
+                update(Wallet)
+                .where(Wallet.wallet_id == wallet_id)
+                .values(reward_points=current_reward_points + new_reward_points)  # ✅ Accumulate
+            )
+            
+            await db.execute(stmt)
+            await db.commit()
+
+            return {"message": "User reward points updated successfully",
+                    "reward_points": new_reward_points,
+                    "user_id": user_id}
+        
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error updating user reward points: {str(e)}")
+        
+        
+
+    @staticmethod
+    async def update_user_reward_points2(db: AsyncSession, user_id: str, new_reward_points: float):
+        try:
+            # Fetch wallet ID for user
+            result = await db.execute(
+                select(UserWallet.wallet_id).where(UserWallet.user_id == user_id)
+            )
+
+            wallet_id = result.scalar_one_or_none()
+            if not wallet_id:
+                raise HTTPException(status_code=404, detail="Wallet not found for the user")
+
+            # Update reward points
+            stmt = update(Wallet).where(Wallet.wallet_id == wallet_id).values(reward_points=new_reward_points)
+            await db.execute(stmt)
+            await db.commit()
+
+            return {"message": "User reward points updated successfully"}
+
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error updating user reward points: {str(e)}")
+        
+
+    @staticmethod
+    async def get_user_by_referral_id(db: AsyncSession, referral_id: str):
+        try:
+            # Query to retrieve the user based on referral_id
+            result = await db.execute(
+                select(User).filter(User.referral_id == referral_id)
+            )
+            
+            # Get the user from the result
+            user = result.scalar_one_or_none()
+
+            # If no user is found, raise an exception
+            if not user:
+                raise HTTPException(status_code=404, detail=f"User with referral_id {referral_id} not found")
+            
+            return user
+        
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error retrieving user by referral_id: {str(e)}")
+        
+
+
+
+
+    # ✅ Fetch Upline Hierarchy Using CTE
+    @staticmethod
+    async def get_upline(db: AsyncSession, user_id: str) -> Optional[ReferralUplineSchema]:
+        """Fetch the upline hierarchy recursively (all uplines) using CTE."""
+        try:
+            # ✅ Recursive CTE Query for Uplines
+            cte = (
+                select(
+                    Referral.referred_by.label("upline_id"),
+                    Referral.referred_to.label("downline_id")
+                )
+                .where(Referral.referred_to == user_id)
+                .cte(name="upline_cte", recursive=True)
+            )
+
+            recursive_query = (
+                cte.union_all(
+                    select(
+                        Referral.referred_by.label("upline_id"),
+                        cte.c.upline_id.label("downline_id")
+                    )
+                    .join(Referral, Referral.referred_to == cte.c.upline_id)
+                )
+            )
+
+            # Execute Query to Fetch All Uplines
+            result = await db.execute(
+                select(User)
+                .join(recursive_query, recursive_query.c.upline_id == User.user_id)
+                .options(joinedload(User.user_details))
+            )
+            uplines = result.scalars().all()
+
+            # ✅ Fetch the Current User's Details
+            user_query = select(User).filter(User.user_id == user_id).options(joinedload(User.user_details))
+            user_result = await db.execute(user_query)
+            current_user = user_result.scalars().first()
+
+            if not current_user:
+                return None  # User not found
+
+            # ✅ Format User Data (Using Schema)
+            user_data = UserSchema(
+                user_id=current_user.user_id,
+                mobile_number=current_user.mobile_number,
+                account_type=current_user.account_type,
+                first_name=current_user.user_details.first_name if current_user.user_details else None,
+                middle_name=current_user.user_details.middle_name if current_user.user_details else None,
+                last_name=current_user.user_details.last_name if current_user.user_details else None,
+                suffix=current_user.user_details.suffix_name if current_user.user_details else None,
+                status="ACTIVATED" if current_user.is_activated else "NOT ACTIVATED"
+            )
+
+            # ✅ Format Uplines Data (Using Schema)
+            uplines_data = [
+                UserSchema(
+                    user_id=upline.user_id,
+                    mobile_number=upline.mobile_number,
+                    account_type=upline.account_type,
+                    first_name=upline.user_details.first_name if upline.user_details else None,
+                    middle_name=upline.user_details.middle_name if upline.user_details else None,
+                    last_name=upline.user_details.last_name if upline.user_details else None,
+                    suffix=upline.user_details.suffix_name if upline.user_details else None,
+                    status="ACTIVATED" if upline.is_activated else "NOT ACTIVATED"
+                )
+                for upline in uplines
+            ]
+
+            return ReferralUplineSchema(user=user_data, uplines=uplines_data)
+
+        except Exception as e:
+            print(f"Error fetching upline: {e}")
+            return None  # Handle error gracefully
+
+
+    @staticmethod
+    async def get_downline(db: AsyncSession, user_id: str) -> Optional[ReferralDownlineSchema]:
+        """Fetch user details and their downline hierarchy recursively using CTE."""
+
+        try:
+            # ✅ Step 1: Define the recursive CTE to get all downline user IDs
+            downline_cte = (
+                select(Referral.referred_by, Referral.referred_to)
+                .filter(Referral.referred_by == user_id)
+                .cte(name="downline", recursive=True)
+            )
+
+            recursive_query = (
+                select(Referral.referred_by, Referral.referred_to)
+                .join(downline_cte, Referral.referred_by == downline_cte.c.referred_to)
+            )
+
+            downline_cte = downline_cte.union_all(recursive_query)
+
+            # ✅ Step 2: Fetch user details for downline members
+            result = await db.execute(
+                select(User)
+                .join(downline_cte, User.user_id == downline_cte.c.referred_to)
+                .options(joinedload(User.user_details))  # Load user details relationship
+            )
+
+            downlines = [
+                UserSchema(
+                    user_id=user.user_id,
+                    mobile_number=user.mobile_number,
+                    account_type=user.account_type,
+                    first_name=user.user_details.first_name if user.user_details else None,
+                    middle_name=user.user_details.middle_name if user.user_details else None,
+                    last_name=user.user_details.last_name if user.user_details else None,
+                    suffix=user.user_details.suffix_name if user.user_details else None,
+                    status="ACTIVATED" if user.is_activated else "NOT ACTIVATED"
+                )
+                for user in result.scalars().all()
+            ]
+
+            # ✅ Step 3: Fetch the current user's details
+            result = await db.execute(
+                select(User)
+                .filter(User.user_id == user_id)
+                .options(joinedload(User.user_details))
+            )
+            current_user = result.scalars().first()
+
+            if not current_user:
+                return None  # If user not found, return None
+
+            user_data = UserSchema(
+                user_id=current_user.user_id,
+                mobile_number=current_user.mobile_number,
+                account_type=current_user.account_type,
+                first_name=current_user.user_details.first_name if current_user.user_details else None,
+                middle_name=current_user.user_details.middle_name if current_user.user_details else None,
+                last_name=current_user.user_details.last_name if current_user.user_details else None,
+                suffix=current_user.user_details.suffix_name if current_user.user_details else None,
+                status="ACTIVATED" if current_user.is_activated else "NOT ACTIVATED"
+            )
+
+            # ✅ Step 4: Return structured response with both user and downlines
+            return ReferralDownlineSchema(user=user_data, downlines=downlines)
+
+        except Exception as e:
+            print(f"Error fetching downline: {e}")
+            return None
+
+
+    @staticmethod
+    async def get_user_downline(db: AsyncSession, user_id: str) -> List[UserSchema]:
+        """Fetch only the downline members recursively (all levels)."""
+
+        try:
+            # Recursive Common Table Expression (CTE) to fetch all downlines
+            downline_cte = (
+                select(Referral.referred_by, Referral.referred_to)
+                .filter(Referral.referred_by == user_id)
+                .cte(name="downline", recursive=True)
+            )
+
+            recursive_query = (
+                select(Referral.referred_by, Referral.referred_to)
+                .join(downline_cte, Referral.referred_by == downline_cte.c.referred_to)
+            )
+
+            downline_cte = downline_cte.union_all(recursive_query)
+
+            # Execute the query to get all downlines with joined user details
+            result = await db.execute(
+                select(User)
+                .join(downline_cte, User.user_id == downline_cte.c.referred_to)
+                .options(joinedload(User.user_details))  # Load user details relationship
+            )
+
+            downlines = [
+                UserSchema(
+                    user_id=user.user_id,
+                    mobile_number=user.mobile_number,
+                    account_type=user.account_type,
+                    first_name=user.user_details.first_name if user.user_details else None,
+                    middle_name=user.user_details.middle_name if user.user_details else None,
+                    last_name=user.user_details.last_name if user.user_details else None,
+                    suffix=user.user_details.suffix_name if user.user_details else None,
+                    status="ACTIVATED" if user.is_activated else "NOT ACTIVATED"
+                )
+                for user in result.scalars().all()
+            ]
+
+            return downlines  # ✅ Return only the downlines list
+
+        except Exception as e:
+            print(f"Error fetching downline: {e}")
+            return []
+
+
+
+
+    

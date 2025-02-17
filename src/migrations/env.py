@@ -22,7 +22,22 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 
 from core.database import Base
-from models import user_model, wallet_model, merchant_model, referral_model, otp_records_model, transaction_model
+from models import (
+    user_model, 
+    wallet_model, 
+    merchant_model, 
+    referral_model, 
+    otp_records_model, 
+    transaction_model, 
+    community_model, 
+    reward_history_model,
+    investor_model,
+    hub_model,
+    purchase_model,
+    admin_history_model,
+    admin_accounts_model,
+    activation_history_model,
+    )
 
 from core.config import settings
 

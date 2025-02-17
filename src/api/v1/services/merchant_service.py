@@ -19,9 +19,22 @@ from fastapi.encoders import jsonable_encoder
 import qrcode
 from io import BytesIO
 import base64
-import os
 
-class MerchantService:
+
+from api.v1.repositories.kyc_repository import KYCRepository
+from api.v1.repositories.transaction_repository import TransactionRepository
+from api.v1.repositories.merchant_repository import MerchantRepository
+import httpx
+from decouple import config 
+
+from api.v1.repositories.community_repository import CommunityRepository
+from api.v1.repositories.hub_repository import HubRepository
+from api.v1.repositories.investor_repository import InvestorRepository
+from api.v1.services.reward_distribution_service import RewardService
+
+class MerchantService:  
+
+
     @staticmethod
     async def get_all_merchant_service(db: AsyncSession):
         try:
@@ -69,7 +82,6 @@ class MerchantService:
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error retrieving merchants: {str(e)}")
-
 
 
     @staticmethod
@@ -252,7 +264,146 @@ class MerchantService:
         )
     
 
-    
+
+
+    @staticmethod
+    async def initiate_merchant_purchase(db: AsyncSession, amount: float, merchant_id: str, user_id: str):
+        try:
+            user = await KYCRepository.get_user(db, user_id)
+
+            user_external_id = user.external_id
+            if not user_external_id:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            # get merchant external id and discount
+            merchant_external_id, merchant_discount = await MerchantRepository.get_merchant_external_id_discount(db, merchant_id)
+            print(f"Merchant External ID: {merchant_external_id}, Discount: {merchant_discount}")
+
+            if not merchant_external_id:
+                raise HTTPException(status_code=404, detail="Merchant not found")
+            
+            # Calculate the discounted amount
+            discount_amount = amount * (merchant_discount / 100)  # Discount as a percentage
+            discounted_total = amount - discount_amount  # Total after discount
+
+            # Calculate the amounts for merchant and admin based on the merchant's discount
+            admin_amount = discounted_total * (merchant_discount / 100)  # Admin gets the merchant's discount
+            merchant_amount = discounted_total - admin_amount  # The remaining amount goes to the merchant
+
+
+            #   user_data = await TransactionRepository.get_user_details(db, user_id)
+
+            hub_id = 'hub'
+            investor_id = 'investor'
+
+
+            await RewardService.distribute_rewards_main(db, admin_amount, user_id, hub_id, investor_id, merchant_id)
+
+            #community_reward = await CommunityRepository.get_community_leader_reward_points(db, user_id)
+            #print(f"Community reward: {community_reward}")
+
+            # inject hub ID
+            #hub_reward = await HubRepository.get_hub_user_reward_points(db, hub_id)
+            #print(f"Hub reward: {hub_reward}")
+
+            # inject investor ID
+            #investor = await InvestorRepository.get_investor_user_reward_points(db, investor_id)
+            #rint(f"Investor reward: {investor}")
+
+
+
+            # Proceed with payment processing
+            async with httpx.AsyncClient() as client:
+                # Initiate transfer to the merchant
+                transfer_payload_merchant = {
+                    "from_user": user_external_id,
+                    "to_user": merchant_external_id,
+                    "amount": merchant_amount,
+                    "coin": "peso",
+                }
+
+                transfer_payload_admin = {
+                    "from_user": user_external_id,
+                    "to_user": config('TW_MOTHERWALLET'),
+                    "amount": admin_amount,
+                    "coin": "peso",
+                }
+
+                response_merchant = await client.post(
+                    url=f"{config('TW_API_URL')}/b2bapi/initiate_p2ptransfer",
+                    headers={
+                        "apikey": config('TW_API_KEY'),
+                        "secretkey": config("TW_SECRET_KEY"),
+                    },
+                    json=transfer_payload_merchant
+                )
+                if response_merchant.status_code != 200:
+                    raise HTTPException(status_code=500, detail="Merchant transfer initiation failed")
+                
+                # Initiate transfer to the admin
+                response_admin = await client.post(
+                    url=f"{config('TW_API_URL')}/b2bapi/initiate_p2ptransfer",
+                    headers={
+                        "apikey": config('TW_API_KEY'),
+                        "secretkey": config("TW_SECRET_KEY"),
+                    },
+                    json=transfer_payload_admin
+                )
+                if response_admin.status_code != 200:
+                    raise HTTPException(status_code=500, detail="Admin transfer initiation failed")
+
+
+                # Process both transfers
+                transaction_merchant = response_merchant.json()
+                transaction_admin = response_admin.json()
+
+                # Process merchant transaction
+                response_merchant_process = await client.post(
+                    url=f"{config('TW_API_URL')}/b2bapi/process_p2ptransfer",
+                    headers={
+                        "apikey": config('TW_API_KEY'),
+                        "secretkey": config("TW_SECRET_KEY"),
+                    },
+                    json={
+                        "Transaction_id": transaction_merchant['transaction_reference'],
+                        #"otp": "example_otp_code",  # Use actual OTP if needed
+                    }
+                )
+
+                # Process admin transaction
+                response_admin_process = await client.post(
+                    url=f"{config('TW_API_URL')}/b2bapi/process_p2ptransfer",
+                    headers={
+                        "apikey": config('TW_API_KEY'),
+                        "secretkey": config("TW_SECRET_KEY"),
+                    },
+                    json={
+                        "Transaction_id": transaction_admin['transaction_reference'],
+                        #"otp": "example_otp_code",  # Use actual OTP if needed
+                    }
+                )
+
+
+            # Return success message
+            return json_response(
+                message="Merchant purchase and admin commission successfully processed.",
+                status_code=200,
+                data={
+                    "merchant_payment": response_merchant_process.json(),
+                    "admin_payment": response_admin_process.json(),
+                }
+            )
+
+
+        except HTTPException as http_error:
+            return json_response(message=str(http_error.detail), status_code=http_error.status_code)
+
+
+        except Exception as e:
+            return json_response(
+                message=f"Error initiating merchant purchase: {str(e)}",
+                status_code=400
+            )
 
         
 
