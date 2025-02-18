@@ -4,6 +4,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from api import router
 from utils.responses import json_response
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="GoSEND Mobile API",
     version="1.0.0",
@@ -12,6 +14,21 @@ app = FastAPI(
 
 app.include_router(router)
 
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",  # Add this variation
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://192.168.1.5:8000",
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc: StarletteHTTPException):
