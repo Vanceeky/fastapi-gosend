@@ -62,7 +62,7 @@ class User(Base):
     purchases = relationship("MerchantPurchase", back_populates="customer")
 
     # relationship to admin accounts
-    admin_account = relationship("AdminAccount", back_populates="user")
+    admin_account = relationship("AdminAccount", back_populates="user", uselist=False)
     
 
 
@@ -93,6 +93,7 @@ class UserDetail(Base):
     
     users = relationship("User", back_populates="user_details")
     
+
 class UserWallet(Base):
     __tablename__ = "user_wallets"
     
@@ -117,6 +118,6 @@ class UserWalletExtension(Base):
     external_id = Column(TEXT, nullable=False, index=True)
 
 
-
     user_wallets = relationship("UserWallet", back_populates="extensions")
+    
     wallet_extensions = relationship("WalletExtensions", back_populates="user_wallet_extensions", uselist=True)

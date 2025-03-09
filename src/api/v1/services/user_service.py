@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from utils.responses import json_response
 from api.v1.repositories.user_repository import UserRepository
 from models.user_model import UserDetail, UserWallet, UserWalletExtension
-from api.v1.schemas.user_schema import UserCreate, UserUpdate, UserResponse, UserAddressCreate, UserDetailCreate, ProcessAccountInput, ProcessMemberActivation, InitiateMemberActivation
+from api.v1.schemas.user_schema import UserCreate, UserUpdate, UserResponse, UserAddressCreate, UserDetailCreate, ProcessAccountInput, ProcessMemberActivation, InitiateMemberActivation, UserDetailSchema, MemberSchema, MemberAddressSchema
 from uuid import uuid4
 from core.security import hash_password
 from decouple import config
@@ -28,8 +28,12 @@ from api.v1.repositories.referral_repository import ReferralRepository
 from models.activation_history_model import ActivationHistory
 
 from api.v1.repositories.account_activation_repository import ActivationHistoryRepository
+from typing import List
 
+from api.v1.schemas.reward_schema import RewardInput
 
+from api.v1.repositories.reward_distribution_repository import RewardDistributionRepository
+from uuid import uuid4
 
 def datetime_to_str(dt: datetime) -> str:
  
@@ -39,6 +43,15 @@ def datetime_to_str(dt: datetime) -> str:
 
 
 class UserService:
+
+
+    @staticmethod
+    async def get_member_info(db: AsyncSession, user_id: str):
+        return await UserRepository.get_member_info(db, user_id)
+    
+
+
+
     @staticmethod
     async def create_user(db: AsyncSession, user_data: UserCreate, referral_code: str = None):
         try:
@@ -184,7 +197,7 @@ class UserService:
             data=UserResponse(
                 user_id=user.user_id,
                 mobile_number=user.mobile_number,
-                email_address=user.email_address,
+                #email_address=user.email_address,
                 status=user.status,
                 created_at=user.created_at.strftime("%Y-%m-%d %H:%M:%S"),
                 updated_at=user.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
@@ -404,7 +417,7 @@ class UserService:
                     try:
                         transaction = Transaction(
                             transaction_id=f"TRX{str(uuid4().hex)}",
-                            sender_id=external_id,
+                            sender_id=user_id, # changed external id to user id
                             receiver_id = config("TW_MOTHERWALLET"),
                             amount=float(150),
                             currency = "peso",
@@ -610,10 +623,11 @@ class UserService:
 
 
     @staticmethod
-    async def initiate_member_activation(db: AsyncSession, account_data: InitiateMemberActivation, activated_by: str):
+    async def initiate_member_activation2(db: AsyncSession, account_data: InitiateMemberActivation, activated_by: str):
         try:
 
             user = await KYCRepository.get_user(db, activated_by)
+            
             external_id = user.external_id
 
             user_data = await TransactionRepository.get_user_details(db, account_data.user_id)
@@ -704,7 +718,7 @@ class UserService:
 
 
     @staticmethod
-    async def process_member_activation(db: AsyncSession, process_account_data: ProcessMemberActivation, user_id: str):
+    async def process_member_activation2(db: AsyncSession, process_account_data: ProcessMemberActivation, user_id: str):
         try:
 
             activation_history = await ActivationHistoryRepository.get_activation_history(db, process_account_data.reference_id)
@@ -749,3 +763,271 @@ class UserService:
                 status_code = 404
             )
         
+
+
+    @staticmethod
+    async def get_users_by_activation_status(db: AsyncSession, is_activated: bool) -> List[UserDetailSchema]:
+        try:
+            users = await UserRepository.get_users_by_activation_status(db, is_activated)
+            return [
+                UserDetailSchema(
+                    user_id=user.user_id,
+                    name=", ".join(filter(None, [user.user_details.last_name, " ".join(filter(None, [user.user_details.first_name, user.user_details.middle_name, user.user_details.suffix_name]))])),
+                    mobile_number=user.mobile_number,
+                    community_name=user.community.community_name if user.community else None
+                )
+                for user in users
+            ]
+
+        except Exception as e:
+            print("Error fetching users by activation status:", str(e))
+            raise e
+        
+
+    @staticmethod
+    async def initiate_member_activation(db: AsyncSession, user_data: InitiateMemberActivation, activated_by: str):
+        try:
+            # Fetch activator's external ID
+            activator_external_id = await UserRepository.get_user_external_id(db, activated_by)
+            
+            # Fetch user details
+            user_info = await UserRepository.get_user_name(db, user_data.user_id)
+            if not user_info:
+                return json_response(
+                    message="User not found",
+                    status_code=404
+                )
+
+            # Fetch wallet balance
+            user_balance = await UserRepository.get_user_wallet_balance(db, activated_by)
+            print("User_balance:", user_balance)
+
+            #user_data = await UserRepository.get_user_data(db, user_data.user_id)
+            #if not user_data.is_kyc_verified:
+            #    return json_response(
+            #        message="User is not KYC verified",
+            #        status_code=400
+            #    )
+
+            # 4. Ensure the user has at least 175 pesos
+            activation_amount = 175
+            if user_balance < activation_amount:
+                return json_response(
+                    message="Insufficient balance for activation",
+                    data={
+                        "current_balance": float(user_balance),  # Convert Decimal to float here
+                        "required_balance": activation_amount
+                    },
+                    status_code=400
+                )
+
+            
+            # Check if the user has at least 175 pesos
+            if user_balance is None or float(user_balance) < 175:
+                return json_response(
+                    message="Insufficient wallet balance. Minimum required: 175 pesos.",
+                    status_code=400
+                )
+
+            async with httpx.AsyncClient() as client:
+                transfer_payload = {
+                    "from_user": activator_external_id,
+                    "to_user": config("TW_MOTHERWALLET"),
+                    "amount": float(activation_amount),
+                    "coin": "peso",
+                }
+
+                response = await client.post(
+                    url=f"{config('TW_API_URL')}/b2bapi/initiate_p2ptransfer",
+                    headers={
+                        "apikey": config('TW_API_KEY'),
+                        "secretkey": config("TW_SECRET_KEY"),
+                    },
+                    json=transfer_payload
+                )
+
+                if response.status_code != 200:
+                    try:
+                        error_data = response.json()
+                    except Exception:
+                        error_data = {"message": response.text.strip()}
+
+                    return json_response(
+                        message="Failed to initiate transfer",
+                        data=error_data,
+                        status_code=response.status_code
+                    )
+
+                # Save activation history if successful
+                try:
+                    activation_history = ActivationHistory(
+                        transaction_id=f"TRX{uuid4().hex[:17]}",  # Ensures length is exactly 20
+                        user_id=user_data.user_id,
+                        receiver_id=config("ADMIN_STAGING"),  # Changed to TW_MOTHERWALLET
+                        activated_by=activated_by,
+                        amount=175.0,
+                        title="Account Activation",
+                        description="You have paid 175 pesos for member account activation",
+                        activated_in="web",
+                        sender_name=str(mask_name(f"{user_info["first_name"]} {user_info["last_name"]}.")),
+                        receiver_name="ADMIN MOTHERWALLET",
+                        reference_id=response.json().get('Transaction_id'),
+                    )
+
+                    db.add(activation_history)
+                    await db.commit()
+                    await db.refresh(activation_history)
+
+                    return json_response(
+                        message="Account activation initiated successfully",
+                        data=response.json(),  # Transaction reference
+                        status_code=200
+                    )
+
+                except Exception as e:
+                    await db.rollback()
+                    return json_response(
+                        message="Error creating transaction",
+                        data=str(e),
+                        status_code=500
+                    )
+
+        except Exception as e:
+            return json_response(
+                message="Error fetching user data",
+                data={"error": str(e)},
+                status_code=500
+            )
+
+
+
+    @staticmethod
+    async def process_member_activation(db: AsyncSession, process_account_data: ProcessMemberActivation, activated_by: str):
+        try:
+            activation_history = await ActivationHistoryRepository.get_activation_history(db, process_account_data.reference_id)
+
+            if not activation_history:
+                return json_response(
+                    message="Activation history not found. Please contact customer service for assistance.",
+                    status_code = 404
+                )
+            
+            user = await UserRepository.get_user_data(db, activation_history.user_id)
+            if not user:
+                return json_response(
+                    message="User not found. Please contact customer service for assistance.",
+                    status_code = 404
+                )
+            
+            user.status = True
+            user.is_activated = True
+
+            db.add(user)
+
+            
+            activation_history.status = "Completed"
+            db.add(activation_history)
+            await db.commit()
+            await db.refresh(activation_history)
+
+            # Deduct 175 pesos from the user's wallet
+
+            await UnilevelService.distribute_activation_unilevel_rewards(db, activation_history.user_id, activation_history.reference_id)
+
+            await UserRepository.update_user_reward_points(db, activated_by, 25)  # ✅ Pass only the increment
+
+            reward_history_data = RewardInput(
+                    id=str(uuid4()),
+                    reference_id=activation_history.reference_id,
+                    reward_source_type="Activation Reward",
+                    reward_points=25,
+                    reward_from=activation_history.user_id,
+                    receiver=activated_by,
+                    reward_type=f"Account Activation",
+                    description=f"Account activation reward of {25} points credited to {activated_by}",
+            )
+            await RewardDistributionRepository.create_reward_distribution_history(db, reward_history_data)
+
+
+            reward_history_data = RewardInput(
+                id = str(uuid4()),
+                reference_id = activation_history.reference_id,
+                reward_source_type = "Account Activation",
+                reward_points = 95, 
+                reward_from = activation_history.user_id,
+                receiver = config("ADMIN_STAGING"),  # Extract user_id from the result
+                reward_type = f"Account Activation",
+                description = f"Admin received 95 reward points"  # 🔥 Use `distribution[key]`
+            )
+
+            await RewardDistributionRepository.create_reward_distribution_history(db, reward_history_data)
+
+            await RewardDistributionRepository.create_admin_reward_distribution_history(db, reward_history_data)
+            await UserRepository.update_user_reward_points(db, config("ADMIN_STAGING"), 95)  # ✅ Pass only the increment
+
+            user_balance = await UserRepository.get_user_wallet_balance(db, activated_by)
+
+            new_balance = user_balance - 175
+
+            # 2. Update wallet balance in the database
+            await UserRepository.update_user_wallet_balance(db, activated_by, new_balance)
+
+
+
+
+            return json_response(
+                message="Account activation processed successfully",
+                data={"new_wallet_balance": float(new_balance)},  # Convert Decimal to float
+                status_code=200
+            )
+            
+
+        except Exception as e:
+            return json_response(
+                message=f"Error fetching user topwallet id: {str(e)}",
+                
+                status_code = 404
+            )
+        
+
+            
+
+
+    @staticmethod
+    async def get_members_list(db: AsyncSession):
+        try:
+            users_data = await UserRepository.get_member_details(db)
+
+            if not users_data:  # Handle empty result
+                return []  # Return empty list if no users found
+
+            users_list = [
+                MemberSchema(
+                    user_id=user["user_id"],
+                    # Format name as "firstname, middlename, lastname, suffix"
+                    name=f"{user['first_name']}, {user['middle_name'] or ''} {user['last_name']}, {user['suffix_name'] or ''}".strip(),
+                    mobile_number=user["mobile_number"],
+                    wallet_balance=float(user["wallet_balance"]) if user["wallet_balance"] is not None else 0.0,
+                    reward_points=float(user["reward_points"]) if user["reward_points"] is not None else 0.0,
+                    account_type=user["account_type"],
+                    community_name=user["community_name"],
+                    # Format address as "house number, streetname, barangay, city, province, region"
+                    address=f"{user['house_number'] or ''}, {user['street_name'] or ''}, {user['barangay'] or ''}, {user['city'] or ''}, {user['province'] or ''}, {user['region'] or ''}".strip(),
+                    is_kyc_verified=user["is_kyc_verified"],
+                    is_activated=user["is_activated"],
+                    date_created=str(user["date_created"]),
+                )
+                for user in users_data
+            ]
+
+            return users_list
+        except Exception as e:
+            return json_response(
+                message=str(e),
+                status_code=500
+            )
+
+
+
+
+    

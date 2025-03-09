@@ -51,23 +51,35 @@ class CommunityWithLeaderDetailsResponse(BaseModel):
 
 
 # Schema for a community member
+# Schema for a community member
 class CommunityMember(BaseModel):
     user_id: str
     mobile_number: str
     account_type: str
+    first_name: Optional[str]
+    middle_name: Optional[str]
+    last_name: Optional[str]
+    suffix_name: Optional[str]
+    is_activated: bool
+    is_kyc_verified: bool
 
 # Schema for the community leader (same structure as a member)
 class CommunityLeader(BaseModel):
     user_id: str
     mobile_number: str
     account_type: str
+    first_name: Optional[str]
+    middle_name: Optional[str]
+    last_name: Optional[str]
+    suffix_name: Optional[str]
+    is_activated: bool
+    is_kyc_verified: bool
 
 # Schema for the full community response
 class CommunityMembersResponse(BaseModel):
     community_name: str
     leader: Optional[CommunityLeader]  # Leader is optional in case no leader is set
     members: List[CommunityMember] = []  # Defaults to an empty list if no members exist
-
 
 
 class LeaderSchema(BaseModel):
@@ -79,7 +91,7 @@ class LeaderSchema(BaseModel):
 class CommunitySchema(BaseModel):
     community_id: str
     community_name: str
-    leader: Optional[LeaderSchema]
+    leader_name: str
     reward_points: float
     number_of_members: int
     date_added: str

@@ -170,7 +170,7 @@ class UserResponse(BaseModel):
     """
     user_id: str
     mobile_number: str
-    email_address: str
+   # email_address: str
     status: bool
     created_at: str
     updated_at: str
@@ -261,4 +261,69 @@ class InitiateMemberActivation(BaseModel):
 
 class ProcessMemberActivation(BaseModel):
     reference_id: str
-    otp_code: str
+    otp_code: Optional[str]
+
+
+class UserDetailSchema(BaseModel):
+    user_id: str
+    name: str  # Full name formatted as "LastName, FirstName MiddleName Suffix"
+    mobile_number: str
+    community_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True  # Enables ORM mode
+
+
+
+class MemberAddressSchema(BaseModel):
+    house_number: Optional[str] = None
+    street_name: Optional[str] = None
+    barangay: Optional[str] = None
+    city: Optional[str] = None
+    province: Optional[str] = None
+    region: Optional[str] = None
+
+class MemberSchema(BaseModel):
+    user_id: str
+    name: str  # Formatted as "firstname, middlename, lastname, suffix"
+    mobile_number: str
+    wallet_balance: float
+    reward_points: float
+    account_type: str
+    community_name: Optional[str] = None
+    address: str  # Formatted as "house number, streetname, barangay, city, province, region"
+    is_kyc_verified: bool
+    is_activated: bool
+    date_created: str
+
+    class Config:
+        from_attributes = True  # Enables ORM mode
+
+
+
+
+class UserInfoResponse(BaseModel):
+    user_id: str
+    referral_id: str
+    last_name: str
+    first_name: str
+    middle_name: Optional[str] = None
+    suffix_name: Optional[str] = None
+    mobile_number: str
+    wallet_balance: Optional[float] = 0.0
+    reward_points: Optional[int] = 0
+    account_type: str
+    community_id: Optional[str] = None
+    community_name: Optional[str] = None
+    house_number: Optional[str] = None
+    street_name: Optional[str] = None
+    barangay: Optional[str] = None
+    city: Optional[str] = None
+    province: Optional[str] = None
+    region: Optional[str] = None
+    is_kyc_verified: bool
+    is_activated: bool
+    date_created: datetime
+
+    class Config:
+        from_attributes = True  # Allows conversion from ORM models

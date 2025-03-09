@@ -1,12 +1,20 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from api.v1.schemas.user_schema import UserCreate, UserUpdate, UserResponse, ProcessAccountInput, UplineResponse, DownlineResponse, ProcessMemberActivation, InitiateMemberActivation
+from api.v1.schemas.user_schema import UserCreate, UserUpdate, UserResponse, ProcessAccountInput, UplineResponse, DownlineResponse, ProcessMemberActivation, InitiateMemberActivation, UserDetailSchema, MemberSchema, UserInfoResponse
 from api.v1.services.user_service import UserService
 from core.database import get_db
 from core.security import JWTBearer, get_jwt_identity
 from fastapi import status
+from typing import List
+
+
 
 router = APIRouter()
+
+
+@router.get("/info/{user_id}", response_model=UserInfoResponse)
+async def get_member_info(user_id: str, db: AsyncSession = Depends(get_db)):
+    return await UserService.get_member_info(db, user_id)
 
 @router.post("", response_model=UserResponse)
 async def create_user(user_data: UserCreate, referral_id: str, db: AsyncSession = Depends(get_db)):
@@ -77,8 +85,11 @@ async def initiate_member_activation(
     db: AsyncSession = Depends(get_db),
     token: str = Depends(JWTBearer())
 ):
+    print("Token:", token)
     activated_by = get_jwt_identity(token)
+    print("activated_by_", activated_by)
     return await UserService.initiate_member_activation(db, user_id, activated_by)
+
 
 @router.post('/process-member-activation', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
 async def process_member_activation(
@@ -100,3 +111,12 @@ async def get_user_upline(user_id: str, db: AsyncSession = Depends(get_db)):
 async def get_user_downline(user_id: str, db: AsyncSession = Depends(get_db)):
     downline = await UserService.get_user_downline_service(db, user_id)
     return downline
+
+
+@router.get("/activation_status/", response_model=List[UserDetailSchema])
+async def get_users(is_activated: bool, db: AsyncSession = Depends(get_db)):
+    return await UserService.get_users_by_activation_status(db, is_activated)
+
+@router.get("/members/list", response_model=List[MemberSchema])
+async def get_members(db: AsyncSession = Depends(get_db)):
+    return await UserService.get_members_list(db)

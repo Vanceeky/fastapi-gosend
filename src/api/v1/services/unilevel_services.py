@@ -471,3 +471,91 @@ class UnilevelService:
 
 
 
+    @staticmethod
+    async def distribute_activation_unilevel_rewards(db: AsyncSession, user_id: str, reference_id: str):
+        try:
+            from decimal import Decimal  # Ensure Decimal precision
+
+            unilevel_distribution = {
+                "Level 1": 40,
+                "Level 2": 10,
+                "Level 3": 5
+            }
+
+            GOSEND_ADMIN = config("ADMIN_STAGING")
+            current_user = user_id
+            total_admin_reward = Decimal("0")  # Track admin's unilevel rewards separately
+
+            for level, reward in unilevel_distribution.items():
+                referrer = await ReferralRepository.get_referral(db, current_user)  # Get referrer
+
+                if not referrer:  
+                    total_admin_reward += reward  # Track reward for admin
+                    continue  # Skip updating a missing referrer
+
+                # Fetch referrer's current reward points
+                await UserRepository.get_user_reward_points(db, referrer)
+
+                # Update referrer's reward points
+                updated_reward_points = reward
+                await UserRepository.update_user_reward_points(db, referrer, updated_reward_points)
+
+                # Store reward history
+                reward_history_data = RewardInput(
+                    id=str(uuid4()),
+                    reference_id=reference_id,
+                    reward_source_type="Unilevel Reward",
+                    reward_points=reward,
+                    reward_from=user_id,
+                    receiver=referrer,
+                    reward_type=f"{level} Unilevel Reward",
+                    description=f"{level} Unilevel reward of {reward} points credited to {referrer}",
+                )
+                await RewardDistributionRepository.create_reward_distribution_history(db, reward_history_data)
+                #await RewardDistributionRepository.create_admin_reward_distribution_history(db, reward_history_data)
+
+                current_user = referrer  # Move to next referrer
+
+            # 🔹 Update admin reward once after the loop
+            if total_admin_reward > 0:
+                admin_reward_points = await UserRepository.get_user_reward_points(db, GOSEND_ADMIN)
+                print("Unilevel admin reward pointsss:", admin_reward_points)
+                updated_admin_points = total_admin_reward
+                print("Unilevel updated admin reward pointsss:", updated_admin_points)
+                await UserRepository.update_user_reward_points(db, GOSEND_ADMIN, updated_admin_points)
+
+                # Store admin reward history
+                admin_reward_history = RewardInput(
+                    id=str(uuid4()),
+                    reference_id=reference_id,
+                    reward_source_type="Unilevel Reward",
+                    reward_points=total_admin_reward,
+                    reward_from=user_id,
+                    receiver=GOSEND_ADMIN,
+                    reward_type="Unilevel Admin Reward",
+                    description=f"Admin received {total_admin_reward} unilevel reward points",
+                )
+                await RewardDistributionRepository.create_reward_distribution_history(db, admin_reward_history)
+                
+                # Store admin reward history
+                admin_reward_history_entry = RewardInput(
+                    id=str(uuid4()),  # Ensure a new UUID
+                    reference_id=reference_id,
+                    reward_source_type="Unilevel Reward",
+                    reward_points=total_admin_reward,
+                    reward_from=user_id,
+                    receiver=GOSEND_ADMIN,
+                    reward_type="Unilevel Admin Reward",
+                    description=f"Admin received {total_admin_reward} unilevel reward points",
+                )
+                await RewardDistributionRepository.create_admin_reward_distribution_history(db, admin_reward_history_entry)
+
+            await db.commit()
+            return {"message": "Unilevel rewards distributed successfully"}
+
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=400, detail=f"Error in unilevel distribution: {str(e)}")
+
+
+

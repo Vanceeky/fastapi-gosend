@@ -92,3 +92,19 @@ class TransactionRepository:
         
         except Exception as e:
             raise HTTPException(status_code=400, details = f"Error creating Distribution: {str(e)}")
+
+
+
+    @staticmethod
+    async def get_all_transactions(db: AsyncSession):
+        try:
+            result = await db.execute(
+                select(Transaction).order_by(Transaction.created_at.desc())
+            )
+
+            transactions = result.scalars().all()
+
+            return transactions
+        
+        except Exception as e:
+            raise e

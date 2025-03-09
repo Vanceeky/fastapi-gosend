@@ -16,6 +16,7 @@ from api.v1.routes import web_authentication_routes as web_auth
 
 from api.v1.routes import unilevel_routes
 from api.v1.routes import admin_accounts_routes
+from api.v1.routes import reward_history_routes
 
 
 router = APIRouter()
@@ -41,3 +42,5 @@ router.include_router(investor.router, prefix="/investor", tags=["investor"])
 router.include_router(hub.router, prefix='/hub', tags=['hubs'])
 
 router.include_router(web_auth.router, prefix=('/web'), tags=['web-auth'])
+
+router.include_router(reward_history_routes.router, prefix="/reward-history", tags=["reward-history"])

@@ -10,10 +10,13 @@ from fastapi import HTTPException
 from models.referral_model import Referral
 from typing import Optional, List
 from api.v1.schemas.user_schema import UserSchema, ReferralDownlineSchema, ReferralUplineSchema
+from models.community_model import Community
 
 from sqlalchemy.sql import union_all
+from fastapi.responses import JSONResponse
 
-
+import logging
+logging.basicConfig(level=logging.INFO)
 
 class UserRepository:
 
@@ -44,6 +47,8 @@ class UserRepository:
 
             await db.rollback()
             raise e
+        
+        
 
     @staticmethod
     async def get_user(db: AsyncSession, user_id: str):
@@ -591,7 +596,261 @@ class UserRepository:
             print(f"Error fetching downline: {e}")
             return []
 
-
+    
+    @staticmethod
+    async def get_users_by_activation_status(db: AsyncSession, is_activated: bool) -> List[User]:
+        query = (
+            select(User)
+            .options(
+                joinedload(User.user_details),  # Load user details
+                joinedload(User.community)  # Load community info
+            )
+            .where(User.is_activated == is_activated)
+        )
+        result = await db.execute(query)
+        return result.scalars().all()  # Return list of User objects
 
 
     
+
+    @staticmethod
+    async def get_user_by_mobile(db: AsyncSession, mobile_number: str):
+        try:
+            result = await db.execute(
+                select(User).filter(User.mobile_number == mobile_number)
+            )
+            user = result.scalars().first()
+            return user
+        
+        except Exception as e:
+            raise e
+        
+
+
+
+
+
+
+
+    # NEW USER REPOSITORY
+
+    @staticmethod
+    async def get_user_data(db: AsyncSession, user_id: str):
+        try:
+            query = (
+            select(User)
+            .where(User.user_id == user_id)
+            )
+
+            result = await db.execute(query)
+            user = result.scalar_one_or_none()
+
+            return user
+
+        except Exception as e:
+            raise e
+
+    @staticmethod
+    async def get_user_external_id(db: AsyncSession, user_id: str):
+        try:
+            query = (
+                select(UserWalletExtension.external_id)
+                .join(UserWallet, UserWallet.wallet_id == UserWalletExtension.wallet_id)
+                .where(UserWallet.user_id == user_id)
+            )
+
+            result = await db.execute(query)
+            external_id = result.scalar_one_or_none()
+
+            return external_id
+
+        except Exception as e:
+            raise e
+        
+    @staticmethod
+    async def get_user_name(db: AsyncSession, user_id: str):
+        try:
+            query = (
+                select(
+                    UserDetail.last_name, 
+                    UserDetail.first_name, 
+                    UserDetail.middle_name, 
+                    UserDetail.suffix_name
+                )
+                .where(UserDetail.user_id == user_id)
+            )
+            result = await db.execute(query)
+            user_details = result.first()
+
+            if user_details:
+                return {
+                    "last_name": user_details.last_name,
+                    "first_name": user_details.first_name,
+                    "middle_name": user_details.middle_name,
+                    "suffix_name": user_details.suffix_name,
+                }
+            return None
+        except Exception as e:
+            raise e
+
+    
+
+    @staticmethod
+    async def get_user_wallet_balance(db: AsyncSession, user_id: str):
+        try:
+            query = (
+                select(Wallet.balance)
+                .join(UserWallet, Wallet.wallet_id == UserWallet.wallet_id)
+                .where(UserWallet.user_id == user_id)
+            )
+
+            result = await db.execute(query)
+            balance = result.scalar_one_or_none()
+
+            return balance
+        
+        except Exception as e:
+            raise e
+    
+    @staticmethod
+    async def update_user_wallet_balance(db: AsyncSession, user_id: str, new_balance: float):
+        try:
+            query = (
+                update(Wallet)
+                .values(balance=new_balance)
+                .where(Wallet.wallet_id == select(UserWallet.wallet_id)
+                    .where(UserWallet.user_id == user_id)
+                    .scalar_subquery())
+            )
+            await db.execute(query)
+            await db.commit()  # Commit changes to the database
+        except Exception as e:
+            await db.rollback()
+            raise e
+
+
+
+
+
+
+    @staticmethod
+    async def get_member_details(db: AsyncSession):
+        try:
+            query = (
+                select(
+                    User.user_id,
+                    UserDetail.last_name,
+                    UserDetail.first_name,
+                    UserDetail.middle_name,
+                    UserDetail.suffix_name,
+                    User.mobile_number,
+                    Wallet.balance.label("wallet_balance"),
+                    Wallet.reward_points,
+                    User.account_type,
+                    Community.community_id,
+                    Community.community_name,
+                    UserAddress.house_number,
+                    UserAddress.street_name,
+                    UserAddress.barangay,
+                    UserAddress.city,
+                    UserAddress.province,
+                    UserAddress.region,
+                    User.is_kyc_verified,
+                    User.is_activated,
+                    User.created_at.label("date_created")
+                )
+                .join(UserDetail, User.user_id == UserDetail.user_id)
+                .outerjoin(UserWallet, User.user_id == UserWallet.user_id)
+                .outerjoin(Wallet, UserWallet.wallet_id == Wallet.wallet_id)
+                .outerjoin(Community, User.community_id == Community.community_id)
+                .outerjoin(UserAddress, User.user_id == UserAddress.user_id)
+            )
+
+            result = await db.execute(query)
+            users_list = result.mappings().all()  # Convert to list of dictionaries
+
+            return users_list
+
+        except Exception as e:
+            return JSONResponse(
+                status_code=400,
+                content={"message": f"Error fetching member details: {str(e)}"}
+            )
+
+
+
+    @staticmethod
+    async def get_member_info(db: AsyncSession, user_id: str):
+        try:
+            query = (
+                select(
+                    User.user_id,
+                    User.referral_id,
+                    UserDetail.last_name,
+                    UserDetail.first_name,
+                    UserDetail.middle_name,
+                    UserDetail.suffix_name,
+                    User.mobile_number,
+                    Wallet.balance.label("wallet_balance"),
+                    Wallet.reward_points,
+                    User.account_type,
+                    Community.community_id,
+                    Community.community_name,
+                    UserAddress.house_number,
+                    UserAddress.street_name,
+                    UserAddress.barangay,
+                    UserAddress.city,
+                    UserAddress.province,
+                    UserAddress.region,
+                    User.is_kyc_verified,
+                    User.is_activated,
+                    User.created_at.label("date_created")
+                )
+                .join(UserDetail, User.user_id == UserDetail.user_id)
+                .outerjoin(UserWallet, User.user_id == UserWallet.user_id)
+                .outerjoin(Wallet, UserWallet.wallet_id == Wallet.wallet_id)
+                .outerjoin(Community, User.community_id == Community.community_id)
+                .outerjoin(UserAddress, User.user_id == UserAddress.user_id)
+                .where(User.user_id == user_id)
+            )
+
+            result = await db.execute(query)
+            user_data = result.mappings().first()  # Fetch single user
+
+            if not user_data:
+                return JSONResponse(
+                    status_code=404,
+                    content={"message": "User not found"}
+                )
+
+            # Convert Decimal to float
+            user_dict = dict(user_data)
+            if user_dict.get("wallet_balance") is not None:
+                user_dict["wallet_balance"] = float(user_dict["wallet_balance"])
+            if user_dict.get("reward_points") is not None:
+                user_dict["reward_points"] = float(user_dict["reward_points"])
+
+            return user_dict  # Return as dictionary for Pydantic parsing
+
+        except Exception as e:
+            return JSONResponse(
+                status_code=400,
+                content={"message": f"Error fetching member details: {str(e)}"}
+            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

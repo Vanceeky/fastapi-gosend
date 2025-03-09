@@ -12,7 +12,7 @@ class AdminAccount(Base):
 
     username = Column(String(255), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    mobile_number = Column(String(10), ForeignKey('users.mobile_number', ondelete="cascade", onupdate="cascade"), unique=True, nullable=True)
+    mobile_number = Column(String(11), ForeignKey('users.mobile_number', ondelete="cascade", onupdate="cascade"), unique=True, nullable=True)
 
     account_type = Column(Enum('SUPERADMIN', 'ADMIN', 'CUSTOMER_SUPPORT'), nullable=False, server_default=text("'CUSTOMER_SUPPORT'"))
 

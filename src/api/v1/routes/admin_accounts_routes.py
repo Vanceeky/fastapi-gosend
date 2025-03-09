@@ -31,7 +31,7 @@ async def create_admin_account(
     try:
         token_data = decode_jwt(token_data)  # Decode the JWT token using your function
     except Exception as e:
-        raise HTTPException(status_code=403, detail="Invalid token or expired token.")
+        raise HTTPException(status_code=403, detail=f"Invalid token or expired token: {str(e)}")
 
     # Now you have the token payload in `token_data`, which is a dictionary
     account_type = token_data.get('account_type')

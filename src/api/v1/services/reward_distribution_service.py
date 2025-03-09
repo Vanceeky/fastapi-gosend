@@ -14,9 +14,13 @@ from api.v1.repositories.user_repository import UserRepository
 from api.v1.repositories.merchant_repository import MerchantRepository
 
 from api.v1.repositories.reward_distribution_repository import RewardDistributionRepository
-from api.v1.schemas.reward_schema import RewardInput
+from api.v1.schemas.reward_schema import RewardInput, UserSchema, RewardHistorySchema
 from api.v1.repositories.admin_repository import AdminRepository
 from api.v1.services.unilevel_services import UnilevelService
+
+
+from utils.responses import json_response
+
 
 class RewardService:
     @staticmethod
@@ -484,3 +488,53 @@ class RewardService:
             raise HTTPException(status_code=400, detail=f"Error distributing rewards: {str(e)}")
 
 
+
+    @staticmethod
+    async def get_all_rewards(db: AsyncSession):
+        try:
+            rewards = await RewardDistributionRepository.get_all_rewards(db)
+
+            rewards_data = [
+                RewardHistorySchema(
+                    id=reward.id,
+                    reference_id=reward.reference_id,
+                    reward_source_type=reward.reward_source_type,
+                    reward_points=reward.reward_points,
+                    reward_from=UserSchema(
+                        first_name=reward.reward_from_user.user_details.first_name,
+                        middle_name=reward.reward_from_user.user_details.middle_name,
+                        last_name=reward.reward_from_user.user_details.last_name,
+                        suffix_name=reward.reward_from_user.user_details.suffix_name,
+                    ) if reward.reward_from_user else None,
+                    receiver=UserSchema(
+                        first_name=reward.receiver_user.user_details.first_name,
+                        middle_name=reward.receiver_user.user_details.middle_name,
+                        last_name=reward.receiver_user.user_details.last_name,
+                        suffix_name=reward.receiver_user.user_details.suffix_name,
+                    ) if reward.receiver_user else None,
+                    reward_type=reward.reward_type,
+                    description=reward.description,
+                    created_at=reward.created_at,
+                    updated_at=reward.updated_at,
+                ).dict()
+                for reward in rewards
+            ]
+
+      
+            return json_response(
+                message = "Error fetching rewards: {}".format(str(e)),
+                data = rewards_data,
+                status_code = 500
+            )
+            
+
+        except Exception as e:
+            return json_response(
+                message = "Error fetching rewards: {}".format(str(e)),
+                status_code = 500
+            )
+
+
+    @staticmethod
+    async def distribute_account_activation_rewards(db: AsyncSession, user_id: str, reward_pool: int, reference_id: str):
+        pass

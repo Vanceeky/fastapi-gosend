@@ -5,7 +5,7 @@ from api.v1.repositories.transaction_repository import TransactionRepository
 
 
 from utils.responses import json_response
-from api.v1.schemas.transaction_schema import TransactionCreate, ProcessTransaction, MerchantData, ProcessQrphTransaction
+from api.v1.schemas.transaction_schema import TransactionCreate, ProcessTransaction, MerchantData, ProcessQrphTransaction, TransactionSchema
 from models.transaction_model import Transaction
 from utils.extra import mask_name
 
@@ -21,6 +21,7 @@ from datetime import timezone, datetime
 from api.v1.services.referral_service import ReferralService
 from api.v1.repositories.referral_repository import ReferralRepository
 
+from fastapi.encoders import jsonable_encoder
 
 class TransactionService:
     @staticmethod
@@ -434,3 +435,28 @@ class TransactionService:
 
 
     
+
+    @staticmethod
+    async def get_all_transactions(db: AsyncSession, user_id: str):
+        try:
+            transactions = await TransactionRepository.get_all_transactions(db)
+            if not transactions:
+                return json_response(
+                    message="No transactions found",
+                    data=[],
+                    status_code=404
+                )
+            
+            transactions_data = jsonable_encoder(
+                [TransactionSchema.model_validate(tx) for tx in transactions]
+            )
+
+            return json_response(
+                message="Successfully fetched transactions",
+                data=transactions_data,
+                status_code=200
+            )
+        
+        except Exception as e:
+            raise e
+

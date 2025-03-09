@@ -9,6 +9,12 @@ from core.security import get_jwt_identity
 router = APIRouter()
 
 
+
+@router.get('/transactions', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
+async def get_all_transactions(db: AsyncSession = Depends(get_db), token: str = Depends(JWTBearer())):
+    user_id = get_jwt_identity(token)
+    return await TransactionService.get_all_transactions(db, user_id)
+
 @router.get('/bank-list/', status_code=status.HTTP_200_OK, dependencies=[Depends(JWTBearer())])
 async def bank_list(db: AsyncSession = Depends(get_db)):
     return await TransactionService.bank_list(db)

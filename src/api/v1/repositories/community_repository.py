@@ -126,12 +126,12 @@ class CommunityRepository:
                 CommunitySchema(
                     community_id=community.community_id,
                     community_name=community.community_name,
-                    leader=LeaderSchema(
-                        first_name=community.leader.user_details.first_name if community.leader else None,
-                        middle_name=community.leader.user_details.middle_name if community.leader else None,
-                        last_name=community.leader.user_details.last_name if community.leader else None,
-                        suffix=community.leader.user_details.suffix_name if community.leader else None,
-                    ) if community.leader else None,
+                    leader_name=(
+                        f"{community.leader.user_details.first_name or ''} "
+                        f"{community.leader.user_details.middle_name or ''} "
+                        f"{community.leader.user_details.last_name or ''} "
+                        f"{community.leader.user_details.suffix_name or ''}"
+                    ).strip() if community.leader else None,
                     reward_points=float(community.reward_points),
                     number_of_members=len(community.users) + (1 if community.leader else 0),  # ✅ Count members + leader
                     date_added=community.created_at.strftime("%Y-%m-%d %H:%M:%S"),
@@ -353,9 +353,59 @@ class CommunityRepository:
         
 
 
-
     @staticmethod
     async def get_community_members(db: AsyncSession, community_id: str):
+        try:
+            query = (
+                select(Community)
+                .options(
+                    joinedload(Community.leader).joinedload(User.user_details),  # Load leader details
+                    joinedload(Community.users).joinedload(User.user_details)  # Load members details
+                )
+                .filter(Community.community_id == community_id)
+            )
+
+            result = await db.execute(query)
+            community = result.scalars().first()
+
+            if not community:
+                return None
+
+            return {
+                "community_name": community.community_name,
+                "leader": {
+                    "user_id": community.leader.user_id,
+                    "mobile_number": community.leader.mobile_number,
+                    "account_type": community.leader.account_type,
+                    "first_name": community.leader.user_details.first_name if community.leader.user_details else None,
+                    "middle_name": community.leader.user_details.middle_name if community.leader.user_details else None,
+                    "last_name": community.leader.user_details.last_name if community.leader.user_details else None,
+                    "suffix_name": community.leader.user_details.suffix_name if community.leader.user_details else None,
+                    "is_activated": community.leader.is_activated,
+                    "is_kyc_verified": community.leader.is_kyc_verified
+                } if community.leader else None,
+                "members": [
+                    {
+                        "user_id": member.user_id,
+                        "mobile_number": member.mobile_number,
+                        "account_type": member.account_type,
+                        "first_name": member.user_details.first_name if member.user_details else None,
+                        "middle_name": member.user_details.middle_name if member.user_details else None,
+                        "last_name": member.user_details.last_name if member.user_details else None,
+                        "suffix_name": member.user_details.suffix_name if member.user_details else None,
+                        "is_activated": member.is_activated,
+                        "is_kyc_verified": member.is_kyc_verified
+                    }
+                    for member in community.users
+                ]
+            }
+
+        except Exception as e:
+            print(f"Error fetching community members: {e}")
+            return None
+
+    @staticmethod
+    async def get_community_members2(db: AsyncSession, community_id: str):
         try:
             query = (
                 select(Community)

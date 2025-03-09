@@ -7,6 +7,7 @@ from uuid import uuid4
 from fastapi import HTTPException
 from core.security import hash_password, verify_password, sign_jwt
 
+from api.v1.repositories.user_repository import UserRepository
 
 
 class AdminAccountService:
@@ -78,6 +79,10 @@ class AdminAccountService:
         try:
             admin_account = await AdminAccountRepository.get_admin_account(db, account_url)
             
+            mobile_number = admin_account.mobile_number
+            
+            user = await UserRepository.get_user_by_mobile(db, mobile_number)
+            
             if not admin_account:
                 return json_response(
                     message="Admin account not found",
@@ -94,7 +99,7 @@ class AdminAccountService:
                     status_code=401
                 )
             
-            access_token = sign_jwt(admin_account.user_id, admin_account.account_type)["access_token"]
+            access_token = sign_jwt(user.user_id, admin_account.account_type)["access_token"]
             
             return json_response(
                 message="Login successful",

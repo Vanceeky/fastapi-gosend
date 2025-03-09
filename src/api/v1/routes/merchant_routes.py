@@ -27,7 +27,7 @@ async def get_all_merchants(db: AsyncSession = Depends(get_db)):
 async def get_merchant(merchant_id: str, db: AsyncSession = Depends(get_db)):
     return await MerchantService.get_merchant_service(db, merchant_id)
 
-@router.post('/{referrer_id}')
+@router.post('/create/{referrer_id}')
 async def create_merchant(merchant_data: MerchantCreate, referral_id: str,db: AsyncSession = Depends(get_db)):
     return await MerchantService.create_merchant_service(db, merchant_data, referral_id)
 
